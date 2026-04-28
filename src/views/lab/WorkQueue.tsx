@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -7,11 +7,13 @@ import {
   ArrowRight, PauseCircle, Timer, MoreVertical,
   Activity as ActivityIcon, Users, Settings,
   Wifi, WifiOff, AlertTriangle, ClipboardList,
-  Image as ImageIcon
+  Image as ImageIcon, Terminal, Keyboard, Scan,
+  Dna, Cpu, Box
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { ResultEntryUI } from '../../components/lab/ResultEntryUI';
 
 type TaskStatus = 'unassigned' | 'claimed' | 'in-progress' | 'review' | 'completed';
 type TaskPriority = 'routine' | 'urgent'| 'stat';
@@ -20,6 +22,7 @@ interface LabTask {
   id: string;
   sampleId: string;
   patientId: string;
+  patientName: string;
   testName: string;
   priority: TaskPriority;
   status: TaskStatus;
@@ -39,12 +42,14 @@ export function WorkQueue() {
   const [filterSection, setFilterSection] = useState('All');
   const [sortBy, setSortBy] = useState<'priority' | 'due'>('priority');
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [isResultEntryOpen, setIsResultEntryOpen] = useState<LabTask | null>(null);
 
   const [tasks, setTasks] = useState<LabTask[]>([
     { 
       id: 'T1', 
       sampleId: 'SMP-8832', 
       patientId: 'PAT-0044',
+      patientName: 'Ahmed Mohammed Ali',
       testName: 'Cardiac Markers (Troponin I)', 
       priority: 'stat', 
       status: 'unassigned', 
@@ -59,6 +64,7 @@ export function WorkQueue() {
       id: 'T2', 
       sampleId: 'SMP-1029', 
       patientId: 'PAT-8812',
+      patientName: 'Sarah Jenkins',
       testName: 'CBC + Differential', 
       priority: 'urgent', 
       status: 'claimed', 
@@ -74,6 +80,7 @@ export function WorkQueue() {
       id: 'T3', 
       sampleId: 'SMP-9921', 
       patientId: 'PAT-3321',
+      patientName: 'Michael Chen',
       testName: 'HbA1c', 
       priority: 'routine', 
       status: 'in-progress', 
@@ -85,32 +92,36 @@ export function WorkQueue() {
       notes: 'Routine diabetic follow-up. Reviewing historical glucose trend.',
       attachments: []
     },
-    { 
-      id: 'T4', 
-      sampleId: 'SMP-7722', 
-      patientId: 'PAT-9002',
-      testName: 'Lipid Profile', 
-      priority: 'routine', 
-      status: 'review', 
-      slaMinutes: 120, 
-      timeRemaining: 15, 
-      owner: 'Technician Ali', 
-      section: 'Biochemistry', 
-      dueAt: new Date(Date.now() + 15 * 60000),
-      notes: 'Pre-insurance physical requirement.',
-      attachments: ['Policy_Ref_77.pdf']
-    },
   ]);
 
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [confirmingTask, setConfirmingTask] = useState<{ id: string; action: TaskStatus } | null>(null);
   
-  // New Interrupt & Offline Sync State
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [syncQueue, setSyncQueue] = useState<{ taskId: string; action: TaskStatus; timestamp: number }[]>([]);
   const [activeWorkId, setActiveWorkId] = useState<string | null>(null);
   const [criticalAlert, setCriticalAlert] = useState<{ message: string; severity: 'high' | 'critical' } | null>(null);
+
+  // Keyboard Shortcuts (UX Requirement)
+  const handleKeyPress = useCallback((e: KeyboardEvent) => {
+    if (isResultEntryOpen) return;
+    
+    // Alt + C: Claim first unassigned urgent task
+    if (e.altKey && e.key === 'c') {
+      const firstUnassigned = tasks.find(t => t.status === 'unassigned');
+      if (firstUnassigned) handleClaim(firstUnassigned.id);
+    }
+    // Alt + S: Scan (Simulated)
+    if (e.altKey && e.key === 's') {
+      toast.info('Barcode Scanner Ready...', { icon: '🔍' });
+    }
+  }, [tasks, isResultEntryOpen]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [handleKeyPress]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -125,7 +136,6 @@ export function WorkQueue() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Resume active work from localStorage if it exists
     const savedWork = localStorage.getItem('active_lab_work');
     if (savedWork) {
       const { taskId } = JSON.parse(savedWork);
@@ -139,12 +149,10 @@ export function WorkQueue() {
     };
   }, []);
 
-  // Process Sync Queue when back online
   useEffect(() => {
     if (!isOffline && syncQueue.length > 0) {
       const processQueue = async () => {
         for (const item of syncQueue) {
-          // Simulate API call for each queued item
           await new Promise(resolve => setTimeout(resolve, 500));
           setTasks(prev => prev.map(t => t.id === item.taskId ? { ...t, status: item.action } : t));
         }
@@ -172,8 +180,7 @@ export function WorkQueue() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Requirement: Add confirmation for REVIEW or COMPLETED, especially if high priority
-    if (newStatus === 'review' || newStatus === 'completed') {
+    if (newStatus === 'completed') {
       setConfirmingTask({ id: taskId, action: newStatus });
       return;
     }
@@ -195,18 +202,24 @@ export function WorkQueue() {
     setConfirmingTask(null);
     toast.success(`Task status updated to ${newStatus}`);
     
-    // Clear local storage if we were working on this task
     if (activeWorkId === taskId) {
       localStorage.removeItem('active_lab_work');
       setActiveWorkId(null);
     }
   };
 
-  const startWork = (taskId: string) => {
-    setActiveWorkId(taskId);
-    localStorage.setItem('active_lab_work', JSON.stringify({ taskId, startTime: Date.now() }));
-    // Simulate navigation/modal opening
+  const startWork = (task: LabTask) => {
+    setIsResultEntryOpen(task);
+    setActiveWorkId(task.id);
+    localStorage.setItem('active_lab_work', JSON.stringify({ taskId: task.id, startTime: Date.now() }));
     toast.info('Starting intensive sample evaluation...');
+  };
+
+  const handleResultsSave = (results: any) => {
+    if (isResultEntryOpen) {
+      updateTaskStatus(isResultEntryOpen.id, 'review');
+      setIsResultEntryOpen(null);
+    }
   };
 
   const toggleSelect = (taskId: string) => {
@@ -228,6 +241,21 @@ export function WorkQueue() {
   };
 
   const sections = ['All', 'Hematology', 'Biochemistry', 'Serology', 'Microbiology'];
+
+  if (isResultEntryOpen) {
+    return (
+      <div className="p-8">
+        <ResultEntryUI 
+          taskId={isResultEntryOpen.id}
+          sampleId={isResultEntryOpen.sampleId}
+          patientName={isResultEntryOpen.patientName}
+          testName={isResultEntryOpen.testName}
+          onSave={handleResultsSave}
+          onCancel={() => setIsResultEntryOpen(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 min-h-screen bg-slate-50/20">
@@ -580,13 +608,12 @@ export function WorkQueue() {
                                <button 
                                  onClick={(e) => {
                                    e.stopPropagation();
-                                   startWork(task.id);
-                                   updateTaskStatus(task.id, 'review');
+                                   startWork(task);
                                  }}
                                  className="flex-1 py-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-slate-200 hover:bg-black hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                                >
-                                 Enter Results
-                                 <ArrowRight size={14} className="text-indigo-400" />
+                                 Result Intelligence
+                                 <Terminal size={14} className="text-indigo-400" />
                                </button>
                              ) : task.status === 'review' ? (
                                <button 

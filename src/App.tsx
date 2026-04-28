@@ -12,6 +12,7 @@ import { WorkQueue } from './views/lab/WorkQueue';
 import { DeviceMonitoring } from './views/lab/DeviceMonitoring';
 import { InventoryManagement } from './views/lab/InventoryManagement';
 import { SampleTracking } from './views/lab/SampleTracking';
+import { QualityControl } from './views/lab/QualityControl';
 import { DoctorIntelligence } from './views/doctor/DoctorIntelligence';
 import { PatientProfile } from './views/doctor/PatientProfile';
 import { ImagingLabView } from './views/ImagingLabView';
@@ -81,6 +82,7 @@ function AnimatedRoutes() {
         <Route path="/lab/devices" element={<DeviceMonitoring />} />
         <Route path="/lab/inventory" element={<InventoryManagement />} />
         <Route path="/lab/samples" element={<SampleTracking />} />
+        <Route path="/lab/qc" element={<QualityControl />} />
         <Route path="/lab/imaging" element={<ImagingLabView />} />
 
         {/* Citizen Wing */}

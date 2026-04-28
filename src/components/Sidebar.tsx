@@ -131,6 +131,7 @@ export function Sidebar() {
           { to: '/lab/dashboard', icon: LayoutDashboard, label: t.dashboard, subtext: t.limsOverview },
           { to: '/lab/queue', icon: TestTube, label: t.workQueue, subtext: t.processing },
           { to: '/lab/samples', icon: Box, label: t.sampleTracking, subtext: t.inventory },
+          { to: '/lab/qc', icon: ShieldCheck, label: t.qcControl, subtext: t.standardization },
           { to: '/lab/imaging', icon: ImageIcon, label: "Imaging Lab", subtext: "Image Intelligence" },
           { to: '/lab/devices', icon: Microscope, label: t.deviceManagement, subtext: t.connectivity },
         ],
