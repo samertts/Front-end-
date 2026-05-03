@@ -50,6 +50,7 @@ export interface AuditLogEntry {
 export interface Task {
   id: string;
   title: string;
+  patientId?: string;
   type: 'diagnostic' | 'validation' | 'inventory_check' | 'audit_review' | 'manual_review';
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'on_hold';
   priority: 'low' | 'medium' | 'high' | 'critical';
@@ -191,7 +192,7 @@ export interface ConsentRecord {
   grantedAt: string;
   expiresAt?: string;
   duration: ConsentDuration;
-  status: 'active' | 'revoked' | 'expired';
+  status: 'active' | 'revoked' | 'expired' | 'pending' | 'rejected';
   purposeOfUse: 'clinical' | 'research' | 'emergency';
 }
 
@@ -200,6 +201,7 @@ export type EventType =
   | 'expiring_reagent' 
   | 'consent_granted' 
   | 'consent_revoked' 
+  | 'consent_requested'
   | 'lab_result_ready'
   | 'inventory_low'
   | 'system_update';

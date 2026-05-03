@@ -38,9 +38,26 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidLabTask(data) {
+      return data.keys().hasAll(['sampleId', 'patientId', 'testName', 'priority', 'status', 'createdAt']) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.sampleId is string && data.sampleId.size() <= 128 &&
+             data.createdAt == request.time;
+    }
+
     // 3. SECURITY MATCH BLOCKS
     match /{document=**} { 
       allow read, write: if isMasterAdmin(); 
+    }
+
+    match /lab_tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidLabTask(incoming());
+      allow update: if isSignedIn() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'owner', 'updatedAt']) ||
+        isMasterAdmin()
+      );
+      allow delete: if isMasterAdmin();
     }
 
     match /users/{userId} {

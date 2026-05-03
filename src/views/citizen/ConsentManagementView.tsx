@@ -31,6 +31,7 @@ export const ConsentManagementView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   const [consents, setConsents] = useState<ConsentRecord[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<ConsentRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionType[]>([]);
   const [selectedDuration, setSelectedDuration] = useState<ConsentDuration>('1_month');
@@ -64,7 +65,8 @@ export const ConsentManagementView: React.FC = () => {
         id: doc.id,
         ...doc.data()
       })) as ConsentRecord[];
-      setConsents(data);
+      setConsents(data.filter(c => c.status !== 'pending'));
+      setPendingRequests(data.filter(c => c.status === 'pending'));
       setIsLoading(false);
     }, (error) => {
       handleFirestoreError(error, 'list', 'consents');
@@ -177,6 +179,46 @@ export const ConsentManagementView: React.FC = () => {
     }
   };
 
+  const handleApproveRequest = async (request: ConsentRecord) => {
+    try {
+      const consentRef = doc(db, 'consents', request.id);
+      await updateDoc(consentRef, {
+        status: 'active',
+        grantedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Emit event
+      await addDoc(collection(db, 'events'), {
+        type: 'consent_granted',
+        recipientId: request.providerId,
+        senderId: auth.currentUser?.uid,
+        wing: 'citizen',
+        read: false,
+        payload: { 
+          consentId: request.id,
+          providerName: request.providerName,
+          permissions: request.permissions
+        },
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, 'update', `consents/${request.id}`);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      const consentRef = doc(db, 'consents', requestId);
+      await updateDoc(consentRef, {
+        status: 'rejected',
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, 'update', `consents/${requestId}`);
+    }
+  };
+
   const permissionList: { id: PermissionType; label: string; icon: any }[] = [
     { id: 'read_vitals', label: t.vitalSigns, icon: ActivityIcon },
     { id: 'read_labs', label: t.labResults, icon: Beaker },
@@ -220,7 +262,65 @@ export const ConsentManagementView: React.FC = () => {
                 <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
              </div>
            ) : activeTab === 'active' ? (
-             consents.filter(c => c.status === 'active').map((c, i) => (
+             <>
+               {pendingRequests.length > 0 && (
+                 <div className="mb-8 space-y-4">
+                   <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                     <Clock className="w-4 h-4" /> Pending Requests
+                   </h3>
+                   {pendingRequests.map((req) => (
+                     <motion.div
+                       key={req.id}
+                       initial={{ opacity: 0, y: 10 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       className="bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 shadow-sm flex items-center justify-between group"
+                     >
+                       <div className="flex items-center gap-5">
+                         <div className="p-4 bg-white text-indigo-600 rounded-2xl shadow-sm">
+                           {React.createElement(getProviderIcon(req.providerId || ''), { className: "w-6 h-6" })}
+                         </div>
+                         <div>
+                           <div className="flex items-center gap-2 mb-1">
+                             <h3 className="font-bold text-slate-900">{req.providerName || 'Healthcare Provider'}</h3>
+                             <span className="text-[8px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                               {t.consentPending}
+                             </span>
+                           </div>
+                           <p className="text-xs text-slate-500 mb-2">Requests {req.scope} access for {req.purposeOfUse} purpose.</p>
+                           <div className="flex gap-1.5 flex-wrap">
+                             {req.permissions?.map(pId => {
+                               const p = permissionList.find(x => x.id === pId);
+                               if(!p) return null;
+                               return (
+                                 <span key={pId} className="px-1.5 py-0.5 bg-white text-[7px] font-black uppercase text-slate-400 border border-slate-100 rounded">
+                                   {p.label}
+                                 </span>
+                               );
+                             })}
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <div className="flex gap-2">
+                         <button 
+                           onClick={() => handleRejectRequest(req.id)}
+                           className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-red-600 transition-colors"
+                         >
+                           {t.cancel}
+                         </button>
+                         <button 
+                           onClick={() => handleApproveRequest(req)}
+                           className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 hover:scale-105 active:scale-95 transition-all"
+                         >
+                           {t.grant}
+                         </button>
+                       </div>
+                     </motion.div>
+                   ))}
+                 </div>
+               )}
+
+               {consents.filter(c => c.status === 'active').map((c, i) => (
                <motion.div
                  key={c.id}
                  initial={{ opacity: 0, scale: 0.98 }}
@@ -280,6 +380,8 @@ export const ConsentManagementView: React.FC = () => {
                  </div>
                </motion.div>
              ))
+             }
+            </>
            ) : (
              auditLogs.map((log, i) => (
                <motion.div

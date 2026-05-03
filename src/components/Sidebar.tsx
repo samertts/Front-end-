@@ -236,20 +236,71 @@ export function Sidebar() {
         isRtl ? "right-0 border-l" : "left-0 border-r",
         isOpen ? "translate-x-0" : (isRtl ? "translate-x-full" : "-translate-x-full")
       )}>
-        <div className="px-6 py-10 flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-2xl shadow-indigo-200 transition-transform hover:rotate-6 group cursor-pointer overflow-hidden relative">
+        <div className="px-6 py-10 flex items-center gap-4 group cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-12 h-12 bg-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-2xl shadow-indigo-200 transition-all group-hover:rotate-6 group-hover:scale-110 overflow-hidden relative">
+             <div className="absolute inset-0 bg-indigo-400 animate-pulse opacity-20" />
              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent" />
-             <div className="w-7 h-7 text-white bg-white/20 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-sm relative z-10">
+             <div className="w-7 h-7 text-white bg-white/20 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-sm relative z-10 transition-all group-hover:border-white/50">
                 <span className="text-[10px] font-black font-headline tracking-tighter">G</span>
              </div>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col transition-transform group-hover:translate-x-1">
             <span className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-1 font-headline">{t.appName}</span>
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600 opacity-80 leading-none">{t.medicalIntelligence}</span>
           </div>
         </div>
 
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-2">
+          {pinnedItems.length > 0 && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="bg-indigo-600/5 rounded-[2rem] p-2 border border-indigo-100/50 mb-4 backdrop-blur-sm relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                <QuickZap size={40} className="text-indigo-600 rotate-12" />
+              </div>
+              <div className="px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">{t.quickAccess}</span>
+                </div>
+                <QuickZap size={10} className="text-indigo-400" />
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                {pinnedItems.map((item) => (
+                  <NavLink
+                    key={`pinned-${item.to}`}
+                    to={item.to}
+                    onClick={() => setIsOpen(false)}
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 group relative",
+                      isActive 
+                        ? "bg-white text-indigo-600 shadow-lg shadow-indigo-100/50 border border-indigo-50" 
+                        : "text-slate-500 hover:text-slate-900 hover:bg-white/80"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+                      "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white"
+                    )}>
+                      <item.icon size={14} />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[11px] font-bold tracking-tight truncate">{item.label}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => togglePin(e, item.to)}
+                      className="ml-auto p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-rose-500"
+                    >
+                      <PinOff size={12} />
+                    </button>
+                  </NavLink>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           <div className="bg-slate-900 shadow-[0_20px_50px_rgba(15,23,42,0.3)] p-1.5 rounded-[2.5rem] border border-white/10 relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-rose-500/5 pointer-events-none" />
             <div className="flex items-center justify-between px-5 py-2 border-b border-white/5 mb-1 relative z-10">
@@ -308,46 +359,6 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 px-4 space-y-3 overflow-y-auto pt-2 custom-scrollbar">
-          {pinnedItems.length > 0 && (
-            <div className="mb-6 space-y-2">
-              <div className="px-4 py-2 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">{t.quickAccess || 'Quick Access'}</span>
-                <QuickZap size={10} className="text-indigo-400 group-hover:animate-pulse" />
-              </div>
-              <div className="space-y-1 bg-slate-50/50 rounded-[2rem] p-2 border border-slate-100/50 backdrop-blur-sm">
-                {pinnedItems.map((item) => (
-                  <NavLink
-                    key={`pinned-${item.to}`}
-                    to={item.to}
-                    onClick={() => setIsOpen(false)}
-                    className={({ isActive }) => cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-300 group relative",
-                      isActive 
-                        ? "bg-white text-indigo-600 shadow-sm border border-slate-100" 
-                        : "text-slate-500 hover:text-slate-900 hover:bg-white"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                      "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white"
-                    )}>
-                      <item.icon size={14} />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-bold tracking-tight truncate">{item.label}</span>
-                    </div>
-                    <button 
-                      onClick={(e) => togglePin(e, item.to)}
-                      className="ml-auto p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:text-rose-500"
-                    >
-                      <PinOff size={12} />
-                    </button>
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )}
-
           {navSections.map((section) => (
             <div key={section.wing} className="space-y-1.5">
               <button
@@ -384,7 +395,7 @@ export function Sidebar() {
                         to={item.to}
                         onClick={() => setIsOpen(false)}
                         className={({ isActive }) => cn(
-                          "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ease-out group relative",
+                          "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 ease-out group relative hover:translate-x-1",
                           isActive 
                             ? "bg-slate-900 text-white font-bold shadow-xl shadow-slate-200" 
                             : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
@@ -392,15 +403,19 @@ export function Sidebar() {
                       >
                         {({ isActive }) => (
                           <>
-                            <item.icon size={18} className={cn("transition-colors", isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-indigo-600")} />
-                            <div className="flex flex-col">
+                            <div className={cn(
+                              "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none",
+                              isActive && "hidden"
+                            )} />
+                            <item.icon size={18} className={cn("transition-all duration-300 group-hover:scale-110", isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-indigo-600")} />
+                            <div className="flex flex-col relative z-10 transition-transform duration-300 group-hover:translate-x-0.5">
                               <span className="text-sm tracking-tight">{item.label}</span>
                               <span className={cn("text-[9px] font-black uppercase tracking-widest", isActive ? "text-indigo-300" : "text-slate-400 opacity-60 group-hover:opacity-100")}>{item.subtext}</span>
                             </div>
                             <button 
                               onClick={(e) => togglePin(e, item.to)}
                               className={cn(
-                                "ml-auto p-2 opacity-0 group-hover:opacity-100 transition-all active:scale-90",
+                                "ml-auto p-2 opacity-0 group-hover:opacity-100 transition-all active:scale-90 relative z-20",
                                 pinnedPaths.includes(item.to) ? "text-indigo-500 opacity-100" : "text-slate-300 hover:text-indigo-600"
                               )}
                             >
@@ -409,7 +424,7 @@ export function Sidebar() {
                             {isActive && (
                               <motion.div 
                                 layoutId="active-nav-bg"
-                                className="absolute inset-0 bg-slate-950 rounded-2xl -z-10"
+                                className="absolute inset-0 bg-slate-950 rounded-2xl -z-10 shadow-[0_0_20px_rgba(15,23,42,0.2)]"
                                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                               />
                             )}

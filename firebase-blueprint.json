@@ -80,6 +80,7 @@
         "value": { "type": "string" },
         "unit": { "type": "string" },
         "range": { "type": "string" },
+        "findings": { "type": "string" },
         "status": { "type": "string", "enum": ["normal", "warning", "critical"] },
         "flag": { "type": "string", "enum": ["N", "H", "L"] },
         "ownerId": { "type": "string", "description": "Creator of result" },
@@ -96,6 +97,7 @@
       "type": "object",
       "properties": {
         "sampleId": { "type": "string" },
+        "patientId": { "type": "string" },
         "testName": { "type": "string" },
         "priority": { "type": "string", "enum": ["routine", "urgent", "stat"] },
         "status": { "type": "string", "enum": ["unassigned", "claimed", "in-progress", "review", "completed"] },

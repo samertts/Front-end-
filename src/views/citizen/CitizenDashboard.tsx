@@ -87,7 +87,18 @@ export function CitizenDashboard() {
             >
               <div className="absolute inset-0 bg-indigo-500/5 rounded-full animate-pulse group-hover:bg-indigo-500/10 transition-all blur-xl" />
               
-              <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 128 128">
+              <div className="absolute inset-0 z-20 pointer-events-none">
+                <motion.div 
+                  animate={{ 
+                    top: ['0%', '100%', '0%'],
+                    opacity: [0, 1, 0]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                  className="absolute w-full h-1 bg-indigo-500/50 blur-sm shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                />
+              </div>
+
+              <svg className="w-40 h-40 transform -rotate-90 relative z-10" viewBox="0 0 128 128">
                 <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100" />
                 <motion.circle 
                   cx="64" cy="64" r="58" 
@@ -106,7 +117,7 @@ export function CitizenDashboard() {
                   </linearGradient>
                 </defs>
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
                 <span className="text-4xl font-black text-slate-900 leading-none">{healthScore}</span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Health Score</span>
               </div>

@@ -7,11 +7,18 @@ import {
   Calendar, CheckCircle2, AlertCircle, ChevronRight,
   TrendingUp, Download, Share2, ClipboardList,
   Stethoscope, Send, Plus, Zap, FileText, Search,
-  History as HistoryIcon, Beaker, MapPin, BrainCircuit, Layers, Sparkles
+  History as HistoryIcon, Beaker, MapPin, BrainCircuit, Layers, Sparkles,
+  Shield, Lock, X, Clock, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
-import { LabTestResult } from '../../types/domain';
+import { LabTestResult, PermissionType, ConsentDuration } from '../../types/domain';
+import { auth, db, handleFirestoreError } from '../../firebase';
+import { 
+  collection, 
+  addDoc, 
+  serverTimestamp,
+} from 'firebase/firestore';
 
 import { ClinicalSummaryBento } from '../../components/doctor/ClinicalSummaryBento';
 import { AITriageAssistant } from '../../components/doctor/AITriageAssistant';
@@ -24,7 +31,13 @@ export function PatientProfile() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'timeline' | 'lab' | 'radiology' | 'prescriptions' | 'notes' | 'ai' | 'history' | 'synthesis' | 'triage'>('synthesis');
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const [showTrendModal, setShowTrendModal] = useState(false);
+  const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<PermissionType[]>(['read_history', 'read_labs']);
+  const [selectedDuration, setSelectedDuration] = useState<ConsentDuration>('1_month');
+  const [selectedScope, setSelectedScope] = useState<'limited' | 'full'>('limited');
+  const [consentPurpose, setConsentPurpose] = useState<'clinical' | 'research' | 'emergency'>('clinical');
   const [historyFilter, setHistoryFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -99,6 +112,54 @@ export function PatientProfile() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const handleRequestConsent = async () => {
+    if (!auth.currentUser) return;
+    setIsSubmittingConsent(true);
+    try {
+      const expiryDate = new Date();
+      if (selectedDuration === '1_day') expiryDate.setDate(expiryDate.getDate() + 1);
+      else if (selectedDuration === '1_week') expiryDate.setDate(expiryDate.getDate() + 7);
+      else if (selectedDuration === '1_month') expiryDate.setMonth(expiryDate.getMonth() + 1);
+
+      const requestData = {
+        citizenId: id || 'P-9021', // Use real ID if available, else mock
+        providerId: auth.currentUser.uid,
+        providerName: auth.currentUser.displayName || 'Dr. Sarah (General)',
+        scope: selectedScope,
+        permissions: selectedPermissions,
+        status: 'pending',
+        duration: selectedDuration,
+        expiresAt: selectedDuration === 'permanent' ? null : expiryDate.toISOString(),
+        purposeOfUse: consentPurpose,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, 'consents'), requestData);
+
+      // Emit event for patient
+      await addDoc(collection(db, 'events'), {
+        type: 'consent_requested',
+        recipientId: id || 'P-9021',
+        senderId: auth.currentUser.uid,
+        wing: 'doctor',
+        read: false,
+        payload: {
+          requestId: 'pending',
+          providerName: auth.currentUser.displayName || 'Dr. Sarah (General)',
+          purpose: consentPurpose
+        },
+        createdAt: serverTimestamp()
+      });
+
+      setShowConsentModal(false);
+    } catch (error) {
+      handleFirestoreError(error, 'create', 'consents');
+    } finally {
+      setIsSubmittingConsent(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 min-h-screen bg-slate-50/20 pb-20">
       {/* Allergy Radar & Safety Banner */}
@@ -167,6 +228,12 @@ export function PatientProfile() {
          </div>
 
          <div className="flex gap-3">
+            <button 
+              onClick={() => setShowConsentModal(true)}
+              className="flex items-center gap-3 px-6 py-4 bg-white/10 hover:bg-white/20 text-indigo-400 rounded-2xl font-bold text-sm transition-all shadow-xl shadow-slate-900/40 border border-white/10"
+            >
+               <Shield size={18} /> {t.requestConsent}
+            </button>
             <button 
               onClick={() => setShowAppointmentModal(true)}
               className="flex items-center gap-3 px-6 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-sm transition-all shadow-xl shadow-slate-900/40"
@@ -842,6 +909,140 @@ export function PatientProfile() {
                      </button>
                   </div>
                </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Consent Request Modal */}
+      <AnimatePresence>
+        {showConsentModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConsentModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-xl bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                 <div>
+                    <h2 className="text-2xl font-bold text-slate-900">{t.requestConsent}</h2>
+                    <p className="text-slate-500 text-sm">Request access to patient's medical data.</p>
+                 </div>
+                 <button onClick={() => setShowConsentModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                    <X className="w-6 h-6 text-slate-400" />
+                 </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
+                <div className="space-y-4">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.requestPurpose}</span>
+                   <div className="flex bg-slate-100 p-1 rounded-2xl">
+                      {(['clinical', 'research', 'emergency'] as const).map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setConsentPurpose(p)}
+                          className={cn(
+                            "flex-1 py-3 rounded-xl text-xs font-bold transition-all",
+                            consentPurpose === p ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {p === 'clinical' ? t.purposeClinical : p === 'research' ? t.purposeResearch : t.purposeEmergency}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.requestScope}</span>
+                   <div className="flex bg-slate-100 p-1 rounded-2xl">
+                      {(['limited', 'full'] as const).map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedScope(s)}
+                          className={cn(
+                            "flex-1 py-3 rounded-xl text-xs font-bold transition-all",
+                            selectedScope === s ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {s === 'limited' ? t.scopeLimited : t.scopeFull}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Requested Data Categories</span>
+                   <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { id: 'read_vitals', label: t.vitalSigns, icon: ActivityIcon },
+                        { id: 'read_labs', label: t.labResults, icon: Beaker },
+                        { id: 'read_history', label: t.healthRecords, icon: FileText },
+                        { id: 'emergency', label: t.emergencyAccess, icon: AlertCircle },
+                      ].map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                             if(selectedPermissions.includes(p.id as PermissionType)) {
+                               setSelectedPermissions(selectedPermissions.filter(x => x !== p.id));
+                             } else {
+                               setSelectedPermissions([...selectedPermissions, p.id as PermissionType]);
+                             }
+                          }}
+                          className={cn(
+                            "flex items-center gap-3 p-4 rounded-2xl border transition-all text-left",
+                            selectedPermissions.includes(p.id as PermissionType) ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-100 text-slate-600 hover:border-indigo-200"
+                          )}
+                        >
+                          <p.icon className={cn("w-5 h-5", selectedPermissions.includes(p.id as PermissionType) ? "text-white" : "text-indigo-600")} />
+                          <span className="text-sm font-bold">{p.label}</span>
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.requestDuration}</span>
+                   <div className="flex bg-slate-100 p-1 rounded-2xl">
+                      {(['1_day', '1_week', '1_month', 'permanent'] as ConsentDuration[]).map(d => (
+                        <button
+                          key={d}
+                          onClick={() => setSelectedDuration(d)}
+                          className={cn(
+                            "flex-1 py-3 px-2 rounded-xl text-xs font-bold transition-all",
+                            selectedDuration === d ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {d === 'permanent' ? t.permanent : d.replace('_', ' ')}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
+                 <button 
+                  onClick={() => setShowConsentModal(false)} 
+                  disabled={isSubmittingConsent}
+                  className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-200 rounded-2xl transition-colors disabled:opacity-50"
+                 >
+                  {t.cancel}
+                 </button>
+                 <button 
+                   onClick={handleRequestConsent}
+                   disabled={isSubmittingConsent || selectedPermissions.length === 0}
+                   className="flex-[2] bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
+                 >
+                   {isSubmittingConsent && <Loader2 className="w-5 h-5 animate-spin" />}
+                   Send Request
+                 </button>
+              </div>
             </motion.div>
           </div>
         )}

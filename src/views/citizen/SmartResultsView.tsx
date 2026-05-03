@@ -3,7 +3,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   FlaskConical, AlertCircle, CheckCircle2, TrendingUp, 
   ArrowRight, Download, Share2, Info, BrainCircuit,
-  MessageSquare, Calendar, ChevronRight, Stethoscope
+  MessageSquare, Calendar, ChevronRight, Stethoscope,
+  Plus, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
@@ -11,12 +12,17 @@ import { LabTestResult } from '../../types/domain';
 import { analyzeLabTrends } from '../../services/aiService';
 import Markdown from 'react-markdown';
 import { toast } from 'sonner';
+import { db, auth, handleFirestoreError } from '../../firebase';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export function SmartResultsView() {
   const { t } = useLanguage();
   const [selectedResult, setSelectedResult] = useState<LabTestResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [liveResults, setLiveResults] = useState<LabTestResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const mockResults: LabTestResult[] = [
     {
@@ -54,6 +60,77 @@ export function SmartResultsView() {
     }
   ];
 
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'lab_results'),
+      where('patientId', '==', auth.currentUser.uid),
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          testName: data.testName || "Unknown Test",
+          value: data.value?.toString() || "0",
+          unit: data.unit || "",
+          range: data.range || "",
+          flag: data.flag || "N",
+          status: data.status || "completed",
+          labName: data.labName || "GULA Lab Service",
+          labId: data.labId || "LAB-001",
+          findings: data.findings || "",
+          date: data.date
+        } as any;
+      });
+      setLiveResults(docs);
+      setIsLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, 'list', 'lab_results');
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const simulateGlucoseResult = async () => {
+    if (!auth.currentUser) {
+      toast.error("You must be signed in to simulate results");
+      return;
+    }
+
+    setIsSimulating(true);
+    try {
+      await addDoc(collection(db, 'lab_results'), {
+        testName: 'Glucose (Fasting)',
+        value: (85 + Math.random() * 15).toFixed(1),
+        unit: 'mg/dL',
+        range: '70 - 99',
+        status: 'normal',
+        flag: 'N',
+        date: serverTimestamp(),
+        patientId: auth.currentUser.uid,
+        ownerId: auth.currentUser.uid,
+        labName: "Smart Health Lab",
+        labId: "LAB-SIM-99",
+        findings: "Glucose levels are within optimal fasting range. No metabolic abnormalities detected at this time."
+      });
+      toast.success("Glucose result simulated successfully");
+    } catch (error) {
+      handleFirestoreError(error, 'create', 'lab_results');
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const allResults = [...liveResults, ...mockResults];
+
   const handleExplain = async (result: LabTestResult) => {
     setSelectedResult(result);
     setIsAnalyzing(true);
@@ -84,6 +161,14 @@ export function SmartResultsView() {
           <p className="text-slate-500 mt-2 font-medium">Clear, AI-powered understanding of your clinical data.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
+          <button 
+            onClick={simulateGlucoseResult}
+            disabled={isSimulating}
+            className="flex-1 md:flex-none px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+          >
+            {isSimulating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            Simulate Glucose
+          </button>
           <button className="flex-1 md:flex-none px-6 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
             <Download size={16} /> {t.exportReport}
           </button>
@@ -93,7 +178,11 @@ export function SmartResultsView() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Results List */}
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockResults.map((result) => {
+          {isLoading ? (
+            <div className="col-span-full py-12 flex justify-center">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+            </div>
+          ) : allResults.map((result) => {
             const interp = getInterpretation(result.flag || 'N');
             return (
               <motion.div 

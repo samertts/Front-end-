@@ -60,6 +60,13 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidLabTask(data) {
+      return data.keys().hasAll(['sampleId', 'patientId', 'testName', 'priority', 'status', 'createdAt']) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.sampleId is string && data.sampleId.size() <= 128 &&
+             data.createdAt == request.time;
+    }
+
     // ============================================================
     // PILLAR 0: GLOBAL SAFETY NET
     // ============================================================
@@ -122,9 +129,9 @@ service cloud.firestore {
     // LAB TASKS (Work Queue)
     match /lab_tasks/{taskId} {
       allow read: if (isTechnician() || isPathologist() || isAdmin());
-      allow create: if (isTechnician() || isAdmin()) && isEmailVerified();
+      allow create: if (isTechnician() || isAdmin()) && isEmailVerified() && isValidLabTask(incoming());
       allow update: if isSignedIn() && (
-        (isTechnician() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'owner'])) ||
+        ((isTechnician() || isPathologist()) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'owner', 'updatedAt'])) ||
         isAdmin()
       );
     }

@@ -1,26 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Activity as ActivityIcon, Send, Sparkles, AlertCircle, Bot, User, Camera, Image as ImageIcon, X } from 'lucide-react';
+import { Activity as ActivityIcon, Send, Sparkles, AlertCircle, Bot, User, Camera, Image as ImageIcon, X, Cpu, Zap, BrainCircuit, Terminal, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getClinicalInsight } from '../services/geminiService';
 import { cn } from '../lib/utils';
+import Markdown from 'react-markdown';
 
 export function LabIntelligenceView() {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string; image?: string }[]>([
-    { role: 'ai', text: "GULA Clinical Intelligence online. Ready for data analysis, differential diagnosis assistance, or report digitization via GULA Vision." }
+    { role: 'ai', text: "GULA Systems Intelligence online. Local knowledge clusters indexed. Semantic retrieval engine ready for cross-module queries." }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'graph' | 'index'>('chat');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [indexingProgress, setIndexingProgress] = useState(94);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [contextLayers, setContextLayers] = useState([
+    { id: 'hem', name: 'Hematology Pattern', active: true },
+    { id: 'bio', name: 'Bio-Grid Telemetry', active: true },
+    { id: 'gen', name: 'Genomic Markers', active: false },
+    { id: 'inf', name: 'Infection Outbreaks', active: true },
+  ]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const toggleLayer = (id: string) => {
+    setContextLayers(prev => prev.map(l => l.id === id ? { ...l, active: !l.active } : l));
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,7 +50,7 @@ export function LabIntelligenceView() {
   const handleSend = async () => {
     if (!input.trim() && !attachedImage) return;
     
-    const userMessage = input || (attachedImage ? "Please analyze this report." : "");
+    const userMessage = input || (attachedImage ? "Please analyze this context." : "");
     const imgData = attachedImage;
     
     setInput('');
@@ -44,7 +58,8 @@ export function LabIntelligenceView() {
     setMessages(prev => [...prev, { role: 'user', text: userMessage, image: imgData || undefined }]);
     setIsTyping(true);
 
-    const context = "Current Patient Profile: Male, 45y. HbA1c: 7.2 (Elevated), LDL: 160 (High). BP: 145/92.";
+    const activeLayers = contextLayers.filter(l => l.active).map(l => l.name);
+    const context = `Active Knowledge Clusters: ${activeLayers.join(', ')}. Clinical Profile: Stable. Relational Index: Valid.`;
     const response = await getClinicalInsight(userMessage, context, imgData || undefined);
     
     setMessages(prev => [...prev, { role: 'ai', text: response }]);
@@ -52,142 +67,264 @@ export function LabIntelligenceView() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200">
-            <Sparkles size={32} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">{t.intelligenceCanvas}</h1>
-            <p className="text-slate-500">Multilingual Clinical Decision Support (CDSS)</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 italic text-xs font-bold shadow-sm">
-          <Camera size={14} /> GULA Vision Active
-        </div>
-      </div>
+    <div className="p-8 max-w-[1400px] mx-auto h-[calc(100vh-120px)] flex gap-8">
+      {/* Left Sidebar: Logic Controls */}
+      <div className="hidden lg:flex flex-col w-80 gap-6">
+        <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white space-y-6">
+           <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-600 rounded-xl">
+                 <Cpu size={20} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest">Semantic Core</h3>
+           </div>
 
-      <div className="flex-1 bg-white rounded-[32px] border border-slate-200 shadow-xl overflow-hidden flex flex-col">
-        <div 
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-6"
-        >
-          <AnimatePresence>
-            {messages.map((msg, i) => (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                key={i}
-                className={cn(
-                  "flex items-end gap-3",
-                  msg.role === 'user' ? "flex-row-reverse" : "flex-row"
-                )}
-              >
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                  msg.role === 'user' ? "bg-slate-100" : "bg-indigo-600 text-white"
-                )}>
-                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                </div>
-                <div className="flex flex-col gap-2 max-w-[80%]">
-                  {msg.image && (
-                    <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                      <img src={msg.image} alt="attached report" className="max-w-full h-auto max-h-64 object-cover" />
-                    </div>
-                  )}
-                  <div className={cn(
-                    "p-4 rounded-2xl text-sm leading-relaxed",
-                    msg.role === 'user' 
-                      ? "bg-slate-100 text-slate-800 rounded-br-none" 
-                      : "bg-indigo-50/50 text-slate-900 border border-indigo-100 rounded-bl-none shadow-sm"
-                  )}>
-                    {msg.text}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          {messages.length === 1 && (
-            <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                { label: "Analyze Elevated HbA1c", prompt: "What are the common differential diagnoses for an HbA1c of 7.2 in a 45y male?" },
-                { label: "Verify Viral Load Pattern", prompt: "Explain the clinical significance of a sudden 2-log increase in viral load." },
-                { label: "Inventory Stock Alert", prompt: "GULA, suggest a reagent optimization strategy for Lab-South wing." },
-                { label: "Read Medical Report", prompt: "Use GULA Vision to analyze the attached CBC report." }
-              ].map((scenario, i) => (
+           <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Indexing</span>
+                 <span className="text-xl font-black">{indexingProgress}%</span>
+              </div>
+              <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                 <motion.div 
+                   animate={{ width: `${indexingProgress}%` }}
+                   className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                 />
+              </div>
+              <p className="text-[9px] text-slate-500 font-medium">42M Knowledge Points Embeddings generated. Local Vector DB synced.</p>
+           </div>
+
+           <div className="pt-4 border-t border-white/5 space-y-3">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Active Context Layers</span>
+              {contextLayers.map(layer => (
                 <button 
-                  key={i}
-                  onClick={() => {
-                    setInput(scenario.prompt);
-                    // Triggering send automatically for a better "quick" experience
-                    setTimeout(() => document.getElementById('ai-send-btn')?.click(), 100);
-                  }}
-                  className="p-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50/50 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all text-left"
+                  key={layer.id}
+                  onClick={() => toggleLayer(layer.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
+                    layer.active ? "bg-indigo-600/20 border-indigo-500/50 text-white" : "bg-white/5 border-white/5 text-slate-500"
+                  )}
                 >
-                  {scenario.label}
+                   <span className="text-xs font-bold">{layer.name}</span>
+                   <div className={cn(
+                     "w-1.5 h-1.5 rounded-full",
+                     layer.active ? "bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.5)]" : "bg-slate-700"
+                   )} />
                 </button>
               ))}
-            </div>
-          )}
-          {isTyping && (
-            <div className="flex items-center gap-2 text-indigo-400">
-              <ActivityIcon className="animate-pulse" size={16} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">GULA analyzing...</span>
-            </div>
-          )}
+           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-          {attachedImage && (
-            <div className="mb-4 relative w-20 h-20 group">
-              <img src={attachedImage} className="w-full h-full object-cover rounded-xl border-2 border-indigo-600" alt="preview" />
-              <button 
-                onClick={() => setAttachedImage(null)}
-                className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full shadow-lg"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 hover:border-indigo-600 transition-all shadow-sm"
-            >
-              <ImageIcon size={20} />
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleImageUpload}
-            />
-            <div className="relative flex-1 group">
-              <input 
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask GULA or attach a report image..."
-                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all shadow-sm group-hover:shadow-md"
-              />
-              <button 
-                id="ai-send-btn"
-                onClick={handleSend}
-                className="absolute right-3 top-2 bottom-2 px-4 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all"
-              >
-                <Send size={18} />
-              </button>
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <AlertCircle size={12} className="text-slate-400" />
-            <span className="text-[10px] text-slate-400 font-medium">Model: GULA-3-Flash. Vision active. Not a medical substitute.</span>
-          </div>
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 flex-1 shadow-sm">
+           <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-slate-100 rounded-xl text-slate-900">
+                 <Zap size={20} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Performance</h3>
+           </div>
+           
+           <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                 <span className="text-xs font-bold text-slate-500">Latency</span>
+                 <span className="font-mono text-xs text-indigo-600">12ms</span>
+              </div>
+              <div className="flex items-center justify-between">
+                 <span className="text-xs font-bold text-slate-500">Token Efficiency</span>
+                 <span className="font-mono text-xs text-emerald-600">92%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                 <span className="text-xs font-bold text-slate-500">Semantic Drift</span>
+                 <span className="font-mono text-xs text-amber-600">0.02</span>
+              </div>
+           </div>
         </div>
       </div>
+
+      {/* Main Canvas */}
+      <div className="flex-1 flex flex-col gap-6">
+         {/* Top Navigation */}
+         <div className="flex items-center gap-2 p-2 bg-slate-100 rounded-2xl w-fit">
+            {[
+              { id: 'chat', label: 'Intelligence Chat', icon: Bot },
+              { id: 'graph', label: 'Semantic Graph', icon: ActivityIcon },
+              { id: 'index', label: 'Index Explorer', icon: Terminal },
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all",
+                  activeTab === tab.id ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                )}
+              >
+                 <tab.icon size={14} />
+                 {tab.label}
+              </button>
+            ))}
+         </div>
+
+         <div className="flex-1 bg-white rounded-[32px] border border-slate-200 shadow-xl overflow-hidden flex flex-col relative">
+            <AnimatePresence mode="wait">
+              {activeTab === 'chat' ? (
+                <motion.div 
+                  key="chat"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="flex-1 flex flex-col overflow-hidden"
+                >
+                  <div 
+                    ref={scrollRef}
+                    className="flex-1 overflow-y-auto p-8 space-y-8"
+                  >
+                    {messages.map((msg, i) => (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={i}
+                        className={cn(
+                          "flex items-start gap-4",
+                          msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg",
+                          msg.role === 'user' ? "bg-slate-950 text-white" : "bg-indigo-600 text-white"
+                        )}>
+                          {msg.role === 'user' ? <User size={20} /> : <Sparkles size={20} />}
+                        </div>
+                        <div className={cn("flex flex-col gap-3 max-w-[85%]", msg.role === 'user' && "items-end")}>
+                          {msg.image && (
+                            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-xl max-w-sm">
+                              <img src={msg.image} alt="context" className="w-full h-auto" />
+                            </div>
+                          )}
+                          <div className={cn(
+                            "p-6 rounded-[2rem] text-sm leading-relaxed relative",
+                            msg.role === 'user' 
+                              ? "bg-slate-950 text-white rounded-tr-none shadow-2xl shadow-slate-200" 
+                              : "bg-indigo-50/30 text-slate-900 border border-indigo-100 rounded-tl-none"
+                          )}>
+                            <Markdown>{msg.text}</Markdown>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {isTyping && (
+                      <div className="flex items-center gap-3 text-indigo-400">
+                        <div className="flex gap-1">
+                          <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                          <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                          <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Neural Processor Active</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-8 border-t border-slate-100 bg-slate-50/30">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex-1 group">
+                        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none text-slate-300">
+                           <BrainCircuit size={18} />
+                           {input === '' && <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Semantic Hybrid Search</span>}
+                        </div>
+                        <input 
+                          type="text"
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                          placeholder="        Analyze system lifecycle or query relational knowledge..."
+                          className="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 px-14 text-sm focus:outline-none focus:border-indigo-600 transition-all shadow-xl shadow-slate-100"
+                        />
+                        <div className="absolute right-4 top-2 bottom-2 flex gap-2">
+                           <button 
+                             onClick={() => fileInputRef.current?.click()}
+                             className="px-4 bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all"
+                           >
+                              <ImageIcon size={20} />
+                           </button>
+                           <button 
+                             onClick={handleSend}
+                             disabled={isTyping}
+                             className="px-6 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                           >
+                              <Send size={18} />
+                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : activeTab === 'graph' ? (
+                <motion.div 
+                   key="graph"
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   exit={{ opacity: 0 }}
+                   className="flex-1 p-8 flex flex-col items-center justify-center space-y-8 bg-slate-900"
+                >
+                   <div className="relative w-full max-w-2xl aspect-square flex items-center justify-center">
+                      {/* Simulated Knowledge Graph */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.1)_0%,transparent_70%)]" />
+                      <div className="p-8 bg-indigo-600 rounded-full shadow-[0_0_100px_rgba(99,102,241,0.5)] z-10 animate-pulse">
+                         <Bot size={48} className="text-white" />
+                      </div>
+                      
+                      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: i * 0.1 }}
+                          style={{
+                            position: 'absolute',
+                            transform: `rotate(${angle}deg) translateY(-180px) rotate(-${angle}deg)`
+                          }}
+                          className="flex flex-col items-center gap-2"
+                        >
+                           <div className="w-16 h-16 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-all cursor-pointer group">
+                              <Database size={24} className="group-hover:scale-110 transition-transform" />
+                              <div className="absolute -inset-2 bg-indigo-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                           </div>
+                           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Cluster {i+1}</span>
+                        </motion.div>
+                      ))}
+
+                      {/* Connection lines would go here in SVGs */}
+                   </div>
+                   <div className="text-center space-y-2 relative z-20">
+                      <h4 className="text-2xl font-black text-white italic">Neural Semantic Map</h4>
+                      <p className="text-slate-400 text-sm max-w-lg">
+                        Visualizing relational dependencies across 42M semantic points.
+                        Yellow nodes indicate high-activity clinical clusters.
+                      </p>
+                   </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                   key="index"
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   exit={{ opacity: 0 }}
+                   className="flex-1 p-8 overflow-y-auto font-mono text-[11px] bg-black text-emerald-500"
+                >
+                   <div className="space-y-1">
+                      <p className="text-slate-500 mb-4 font-sans text-xs">// LOGS: Semantic Engine v2.4.1</p>
+                      <p>[SYSTEM] Parsing module: HEMATOLOGY_CORE_V1</p>
+                      <p>[SYSTEM] Generating Embeddings via GULA-SEMANTIC-MODEL-LARGE</p>
+                      <p className="text-indigo-400">[SUCCESS] Vector DB insertion: 124,502 nodes indexed</p>
+                      <p>[SYSTEM] Relationship analysis start...</p>
+                      <p>[ALERT] Potential semantic overlap: Glucose_Level vs Diabetic_Marker</p>
+                      <p>[SYNC] File watcher active. Root: /clinical/knowledge</p>
+                      <p className="animate-pulse">_</p>
+                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+         </div>
+      </div>
+
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
     </div>
   );
 }
+

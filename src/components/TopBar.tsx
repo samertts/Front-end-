@@ -81,9 +81,17 @@ export function TopBar() {
                <div className={cn("w-1 h-2 rounded-full transition-colors duration-500 opacity-50", isLowBandwidth ? "bg-amber-400" : "bg-indigo-400")} />
                <div className={cn("w-1 h-1 rounded-full transition-colors duration-500 opacity-30", isLowBandwidth ? "bg-amber-300" : "bg-indigo-300")} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/70 whitespace-nowrap hidden sm:inline">
-               {isLowBandwidth ? "Optimization Mode: ACTIVE" : "Grid Core: OPERATIONAL"}
-            </span>
+            <div className="flex flex-col">
+               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/70 whitespace-nowrap hidden sm:inline leading-none mb-0.5">
+                  {isLowBandwidth ? "Optimization Mode: ACTIVE" : "Grid Core: OPERATIONAL"}
+               </span>
+               <div className="flex items-center gap-2">
+                  <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest hidden sm:inline leading-none">Intelligence Engine: Indexing... 94%</span>
+                  <div className="w-12 h-0.5 bg-white/5 rounded-full overflow-hidden hidden sm:block">
+                     <motion.div animate={{ x: ['-100%', '100%'] }} transition={{ duration: 2, repeat: Infinity }} className="w-1/2 h-full bg-indigo-500" />
+                  </div>
+               </div>
+            </div>
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/70 whitespace-nowrap sm:hidden">
                {isLowBandwidth ? "OPT_MODE" : "GRID_SYNC"}
             </span>
@@ -216,13 +224,25 @@ export function TopBar() {
                 key={l}
                 onClick={() => setLanguage(l)}
                 className={cn(
-                  "px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all relative overflow-hidden",
+                  "px-2 sm:px-4 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all relative group overflow-hidden",
                   language === l 
                     ? "bg-white text-indigo-600 shadow-sm ring-1 ring-black/5" 
                     : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                 )}
               >
-                <span className="relative z-10">{l}</span>
+                <span className="relative z-10 flex items-center gap-2">
+                  {l}
+                  <span className="hidden group-hover:inline-block max-w-0 group-hover:max-w-[100px] overflow-hidden transition-all duration-500 ease-in-out whitespace-nowrap text-[8px] opacity-0 group-hover:opacity-100">
+                    {l === 'EN' ? 'English' : l === 'AR' ? 'العربية' : l === 'KU' ? 'کوردی' : l === 'TR' ? 'Türkçe' : 'ܣܘܪܝܝܐ'}
+                  </span>
+                </span>
+                {language === l && (
+                  <motion.div 
+                    layoutId="lang-accent"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
               </button>
             ))}
           </div>
