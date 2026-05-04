@@ -34,9 +34,16 @@ import { MedicationCenter } from './views/citizen/MedicationCenter';
 import { NationalHealthGrid } from './views/ministry/NationalHealthGrid';
 import { EpidemiologicalIntelligence } from './views/ministry/EpidemiologicalIntelligence';
 import { DataSovereigntyAudit } from './views/ministry/DataSovereigntyAudit';
+import { LabNetworkControl } from './views/ministry/LabNetworkControl';
+import { EmergencyCommand } from './views/ministry/EmergencyCommand';
+import { LicensingAccreditation } from './views/ministry/LicensingAccreditation';
+import { FinanceResources } from './views/ministry/FinanceResources';
+import { UserGovernance } from './views/ministry/UserGovernance';
+import { IntegrationGateway } from './views/ministry/IntegrationGateway';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { TourProvider } from './contexts/TourContext';
 import { PermissionGuard } from './components/PermissionGuard';
 import { Toaster } from 'sonner';
 import { CommandPalette } from './components/CommandPalette';
@@ -51,10 +58,12 @@ export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
-        <NotificationProvider>
-          <Toaster position="top-right" richColors />
-          <AppContent />
-        </NotificationProvider>
+        <TourProvider>
+          <NotificationProvider>
+            <Toaster position="top-right" richColors />
+            <AppContent />
+          </NotificationProvider>
+        </TourProvider>
       </LanguageProvider>
     </AuthProvider>
   );
@@ -135,6 +144,36 @@ function AnimatedRoutes() {
         <Route path="/ministry/audit" element={
           <PermissionGuard resource="patient" action="manage" scope="global">
             <DataSovereigntyAudit />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/labs" element={
+          <PermissionGuard resource="infrastructure" action="read" scope="global">
+            <LabNetworkControl />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/emergency" element={
+          <PermissionGuard resource="infrastructure" action="manage" scope="global">
+            <EmergencyCommand />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/licensing" element={
+          <PermissionGuard resource="integration" action="manage" scope="global">
+            <LicensingAccreditation />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/finance" element={
+          <PermissionGuard resource="integration" action="read" scope="global">
+            <FinanceResources />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/users" element={
+          <PermissionGuard resource="infrastructure" action="manage" scope="global">
+            <UserGovernance />
+          </PermissionGuard>
+        } />
+        <Route path="/ministry/integration" element={
+          <PermissionGuard resource="integration" action="manage" scope="global">
+            <IntegrationGateway />
           </PermissionGuard>
         } />
         <Route path="/ministry/analytics" element={

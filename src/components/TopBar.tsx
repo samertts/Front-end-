@@ -153,7 +153,7 @@ export function TopBar() {
              </button>
           </div>
  
-          <div className={cn(
+          <div id="top-bar-search" className={cn(
             "relative w-full max-w-xl group transition-all duration-300",
             showMobileSearch ? "flex absolute left-0 right-0 px-4 z-50 bg-white h-full items-center" : "hidden md:flex"
           )}>
@@ -249,7 +249,7 @@ export function TopBar() {
  
           <div className="h-6 w-px bg-slate-200 hidden md:block" />
  
-          <div className="hidden lg:flex items-center gap-4 group cursor-pointer p-1.5 hover:bg-slate-50 rounded-2xl transition-all">
+          <div id="profile-dropdown" className="hidden lg:flex items-center gap-4 group cursor-pointer p-1.5 hover:bg-slate-50 rounded-2xl transition-all">
              <div className={cn("flex flex-col", isRtl ? "items-start text-left" : "items-end text-right")}>
                 <p className="text-sm font-black text-slate-900 leading-none mb-0.5 group-hover:text-indigo-600 transition-colors">
                   {profile?.displayName || user?.displayName || user?.email?.split('@')[0] || t.clinicalLead}
@@ -276,6 +276,7 @@ export function TopBar() {
           <div className="flex items-center gap-1.5">
             <div className="relative">
                <button 
+                 id="notification-bell"
                  onClick={() => setShowNotifications(!showNotifications)}
                  className="p-3 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-2xl transition-all relative border border-transparent hover:border-slate-100"
                >

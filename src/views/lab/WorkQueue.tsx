@@ -8,12 +8,14 @@ import {
   Activity as ActivityIcon, Users, Settings,
   Wifi, WifiOff, AlertTriangle, ClipboardList,
   Image as ImageIcon, Terminal, Keyboard, Scan,
-  Dna, Cpu, Box
+  Dna, Cpu, Box, X, QrCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { ResultEntryUI } from '../../components/lab/ResultEntryUI';
+import { ConfirmationDialog } from '../../components/ui/ConfirmationDialog';
+import { ResultCertificate } from '../../components/lab/ResultCertificate';
 
 type TaskStatus = 'unassigned' | 'claimed' | 'in-progress' | 'review' | 'completed';
 type TaskPriority = 'routine' | 'urgent'| 'stat';
@@ -96,12 +98,41 @@ export function WorkQueue() {
 
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
-  const [confirmingTask, setConfirmingTask] = useState<{ id: string; action: TaskStatus } | null>(null);
+  
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'primary' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+    variant: 'primary'
+  });
+
+  const triggerConfirm = (
+    title: string, 
+    description: string, 
+    onConfirm: () => void, 
+    variant: 'danger' | 'primary' | 'warning' = 'primary'
+  ) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      description,
+      onConfirm,
+      variant
+    });
+  };
   
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [syncQueue, setSyncQueue] = useState<{ taskId: string; action: TaskStatus; timestamp: number }[]>([]);
   const [activeWorkId, setActiveWorkId] = useState<string | null>(null);
   const [criticalAlert, setCriticalAlert] = useState<{ message: string; severity: 'high' | 'critical' } | null>(null);
+  const [viewingCertificate, setViewingCertificate] = useState<LabTask | null>(null);
 
   // Keyboard Shortcuts (UX Requirement)
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
@@ -164,16 +195,26 @@ export function WorkQueue() {
   }, [isOffline, syncQueue]);
 
   const handleClaim = (taskId: string) => {
-    setIsProcessing(taskId);
-    setTimeout(() => {
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, status: 'claimed', owner: profile?.name || 'You' } : task
-      ));
-      setIsProcessing(null);
-      toast.success('Task Claimed', {
-        description: `Sample ${tasks.find(t => t.id === taskId)?.sampleId} assigned to your queue`
-      });
-    }, 600);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    triggerConfirm(
+      'Claim Laboratory Task',
+      `Assigning sample #${task.sampleId} (${task.testName}) to your queue. Are you ready to begin processing?`,
+      () => {
+        setIsProcessing(taskId);
+        setTimeout(() => {
+          setTasks(prev => prev.map(task => 
+            task.id === taskId ? { ...task, status: 'claimed', owner: profile?.name || 'You' } : task
+          ));
+          setIsProcessing(null);
+          toast.success('Task Claimed', {
+            description: `Sample ${task.sampleId} assigned to your queue`
+          });
+        }, 600);
+      },
+      'primary'
+    );
   };
 
   const updateTaskStatus = (taskId: string, newStatus: TaskStatus) => {
@@ -181,7 +222,13 @@ export function WorkQueue() {
     if (!task) return;
 
     if (newStatus === 'completed') {
-      setConfirmingTask({ id: taskId, action: newStatus });
+      const isHighRisk = task.priority === 'stat' || task.priority === 'urgent';
+      triggerConfirm(
+        'Confirm Clinical Action',
+        `You are about to mark sample #${task.sampleId} as ${newStatus.toUpperCase()}. This action is irreversible. ${isHighRisk ? 'STAT/Urgent samples require strict calibration check.' : ''}`,
+        () => executeStatusUpdate(taskId, newStatus),
+        isHighRisk ? 'danger' : 'primary'
+      );
       return;
     }
 
@@ -192,14 +239,12 @@ export function WorkQueue() {
     if (isOffline) {
       setSyncQueue(prev => [...prev, { taskId, action: newStatus, timestamp: Date.now() }]);
       toast('Change queued for synchronization', { icon: '📥' });
-      setConfirmingTask(null);
       return;
     }
 
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status: newStatus } : task
     ));
-    setConfirmingTask(null);
     toast.success(`Task status updated to ${newStatus}`);
     
     if (activeWorkId === taskId) {
@@ -626,10 +671,16 @@ export function WorkQueue() {
                                  <Shield size={14} />
                                </button>
                              ) : (
-                               <div className="flex-1 py-5 bg-slate-100 text-slate-400 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                 Completed
-                                 <CheckCircle2 size={14} />
-                               </div>
+                               <button 
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setViewingCertificate(task);
+                                 }}
+                                 className="flex-1 py-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-indigo-100 hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"
+                               >
+                                 {t.digitalCertificate}
+                                 <QrCode size={14} className="text-indigo-400" />
+                               </button>
                              )}
                              <button 
                                onClick={(e) => e.stopPropagation()}
@@ -699,76 +750,28 @@ export function WorkQueue() {
          </div>
       </div>
 
-      {/* Action Confirmation Modal */}
+      <ConfirmationDialog 
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        variant={confirmConfig.variant}
+      />
+
       <AnimatePresence>
-        {confirmingTask && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               onClick={() => setConfirmingTask(null)}
-               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-            />
-            <motion.div 
-               initial={{ scale: 0.9, opacity: 0, y: 20 }}
-               animate={{ scale: 1, opacity: 1, y: 0 }}
-               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-               className="relative bg-white w-full max-w-lg rounded-[3rem] p-12 shadow-2xl"
-            >
-               {(() => {
-                 const task = tasks.find(t => t.id === confirmingTask.id)!;
-                 const isHighRisk = task.priority === 'stat' || task.priority === 'urgent';
-                 
-                 return (
-                   <div className="text-center">
-                     <div className={cn(
-                       "w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-2xl",
-                       isHighRisk ? "bg-red-50 text-red-600 shadow-red-100" : "bg-indigo-50 text-indigo-600 shadow-indigo-100"
-                     )}>
-                        <Shield size={48} className={cn(isHighRisk && "animate-pulse")} />
-                     </div>
-                     
-                     <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-4 uppercase">
-                        Confirm Clinical Action
-                     </h3>
-                     
-                     <p className="text-slate-500 font-medium mb-8 text-sm">
-                        You are about to mark sample <span className="font-bold text-slate-900">#{task.sampleId}</span> ({task.testName}) as <span className="font-bold text-indigo-600 uppercase">{confirmingTask.action}</span>. This action is irreversible in the current cycle.
-                     </p>
-
-                     {isHighRisk && (
-                       <div className="mb-8 p-6 bg-red-50 border border-red-100 rounded-[2rem] flex items-center gap-4 text-left">
-                          <AlertCircle className="text-red-600 shrink-0" size={24} />
-                          <div>
-                             <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1 font-sans">High Priority Directive</p>
-                             <p className="text-xs font-bold text-red-900 leading-relaxed">STAT samples require double-verification of all calibrated values before sign-off.</p>
-                          </div>
-                       </div>
-                     )}
-
-                     <div className="flex gap-4">
-                        <button 
-                           onClick={() => setConfirmingTask(null)}
-                           className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
-                        >
-                           Cancel
-                        </button>
-                        <button 
-                           onClick={() => executeStatusUpdate(confirmingTask.id, confirmingTask.action)}
-                           className={cn(
-                             "flex-2 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white shadow-2xl transition-all hover:scale-[1.02] active:scale-95",
-                             isHighRisk ? "bg-red-600 shadow-red-200 hover:bg-red-700" : "bg-indigo-600 shadow-indigo-200 hover:bg-slate-900"
-                           )}
-                        >
-                           Confirm & Sign Result
-                        </button>
-                     </div>
-                   </div>
-                 );
-               })()}
-            </motion.div>
-          </div>
+        {viewingCertificate && (
+          <ResultCertificate 
+            taskId={viewingCertificate.id}
+            patientName={viewingCertificate.patientName}
+            testName={viewingCertificate.testName}
+            resultValue="14.2" // Simulated value
+            unit="g/dL"
+            referenceRange="13.5 - 17.5"
+            issuedAt={new Date().toLocaleDateString()}
+            issuedBy="SYS-LAB-772"
+            onClose={() => setViewingCertificate(null)}
+          />
         )}
       </AnimatePresence>
     </div>

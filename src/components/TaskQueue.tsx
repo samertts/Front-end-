@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Task } from '../types/domain';
 import { cn } from '../lib/utils';
 import { useState, useRef, useEffect } from 'react';
+import { ConfirmationDialog } from './ui/ConfirmationDialog';
 
 interface TaskQueueProps {
   tasks: Task[];
@@ -40,6 +41,36 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onAssign, onUpdateS
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [showBulkDropdown, setShowBulkDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Confirmation Dialog State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'primary' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+    variant: 'primary'
+  });
+
+  const triggerConfirm = (
+    title: string, 
+    description: string, 
+    onConfirm: () => void, 
+    variant: 'danger' | 'primary' | 'warning' = 'primary'
+  ) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      description,
+      onConfirm,
+      variant
+    });
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,8 +106,21 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onAssign, onUpdateS
   };
 
   const handleBulkAction = (action: 'assign' | 'complete' | 'hold' | 'process') => {
-    onBulkAction?.(action, Array.from(selectedIds));
-    setSelectedIds(new Set());
+    const execute = () => {
+      onBulkAction?.(action, Array.from(selectedIds));
+      setSelectedIds(new Set());
+    };
+
+    if (action === 'assign' || action === 'complete') {
+      triggerConfirm(
+        action === 'assign' ? 'Bulk Claim Tasks' : 'Bulk Finalize Tasks',
+        `Are you sure you want to ${action === 'assign' ? 'assign' : 'complete'} ${selectedIds.size} selected tasks? This will update the system-wide status.`,
+        execute,
+        action === 'complete' ? 'danger' : 'primary'
+      );
+    } else {
+      execute();
+    }
   };
 
   const getPriorityColor = (priority: Task['priority']) => {
@@ -271,7 +315,14 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onAssign, onUpdateS
                     {!task.assignedTo ? (
                       <div className="flex gap-2">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); onAssign?.(task.id); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            triggerConfirm(
+                              'Claim Task',
+                              `Do you want to assign task #${task.id.slice(-6)}: "${task.title}" to yourself?`,
+                              () => onAssign?.(task.id)
+                            );
+                          }}
                           className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2"
                         >
                           <UserPlus size={14} /> {t.assignTechnician}
@@ -311,7 +362,15 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onAssign, onUpdateS
                                   </button>
                                   {task.status === 'in_progress' ? (
                                     <button 
-                                      onClick={(e) => { e.stopPropagation(); onUpdateStatus?.(task.id, 'completed'); }}
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        triggerConfirm(
+                                          'Finalize Task',
+                                          `Are you sure you want to finalize task #${task.id.slice(-6)}? This action will mark it as complete and verify the clinical state.`,
+                                          () => onUpdateStatus?.(task.id, 'completed'),
+                                          'danger'
+                                        );
+                                      }}
                                       className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-100 transition-all"
                                     >
                                       Finalize
@@ -431,6 +490,15 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ tasks, onAssign, onUpdateS
           </div>
         )}
       </div>
+
+      <ConfirmationDialog 
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        description={confirmConfig.description}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 };

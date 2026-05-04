@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, AlertCircle, Shield, 
   Zap, Save, ArrowRight, History, 
-  Dna, Beaker, Terminal, Keyboard
+  Dna, Beaker, Terminal, Keyboard,
+  Printer, Download, QrCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { ResultCertificate } from './ResultCertificate';
 
 interface TestParameter {
   id: string;
@@ -42,6 +44,8 @@ export function ResultEntryUI({ taskId, sampleId, patientName, testName, onSave,
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [issuedResult, setIssuedResult] = useState<{ value: string; unit: string; range: string } | null>(null);
 
   const handleValueChange = (id: string, value: string) => {
     setParams(prev => prev.map(p => {
@@ -100,9 +104,19 @@ export function ResultEntryUI({ taskId, sampleId, patientName, testName, onSave,
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
-      onSave(params);
-      toast.success('Results Synchronized', {
-        description: `Task for ${sampleId} moved to validation phase.`
+      
+      // Select a representative result for the certificate preview (usually the primary test parameter)
+      const primaryResult = params[2]; // HGB as example
+      setIssuedResult({
+        value: primaryResult.value,
+        unit: primaryResult.unit,
+        range: primaryResult.referenceRange
+      });
+      
+      setShowCertificate(true);
+      
+      toast.success(t.resultVerified, {
+        description: `Digital certificate generated for ${sampleId}.`
       });
     }, 1500);
   };
@@ -313,6 +327,24 @@ export function ResultEntryUI({ taskId, sampleId, patientName, testName, onSave,
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+        {showCertificate && issuedResult && (
+          <ResultCertificate 
+            taskId={taskId}
+            patientName={patientName}
+            testName={testName}
+            resultValue={issuedResult.value}
+            unit={issuedResult.unit}
+            referenceRange={issuedResult.range}
+            issuedAt={new Date().toLocaleDateString()}
+            issuedBy="SYS-LAB-772"
+            onClose={() => {
+              setShowCertificate(false);
+              onSave(params);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

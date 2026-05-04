@@ -182,10 +182,15 @@ export function Sidebar() {
         icon: Building2,
         label: t.ministryWing,
         items: [
-          { to: '/ministry/dashboard', icon: LayoutDashboard, label: t.dashboard, subtext: t.populationHealth, roles: ['ministry_admin', 'ministry_analyst', 'master_admin'] },
-          { to: '/ministry/analytics', icon: ActivityIcon, label: t.analytics, subtext: t.predictiveTrends, roles: ['ministry_analyst', 'master_admin'] },
-          { to: '/ministry/inspections', icon: ShieldCheck, label: t.compliance, subtext: t.ministryInspector, roles: ['ministry_inspector', 'master_admin'] },
-          { to: '/ministry/registry', icon: ClipboardList, label: t.patientRegistry, subtext: t.globalStatus, roles: ['ministry_admin', 'master_admin'] },
+          { to: '/ministry/dashboard', icon: LayoutDashboard, label: t.nationalCommand, subtext: t.populationHealth, roles: ['ministry_admin', 'ministry_analyst', 'master_admin'] },
+          { to: '/ministry/epidemiology', icon: Globe, label: t.epiSurveillance, subtext: t.activeOutbreaks, roles: ['ministry_analyst', 'master_admin', 'researcher'] },
+          { to: '/ministry/labs', icon: Microscope, label: t.labControl, subtext: t.labThroughput, roles: ['ministry_admin', 'master_admin'] },
+          { to: '/ministry/audit', icon: History, label: t.complianceAudit, subtext: t.integrityRating, roles: ['ministry_inspector', 'master_admin', 'regulator'] },
+          { to: '/ministry/emergency', icon: QuickZap, label: t.emergencyCenter, subtext: t.criticalAlerts, roles: ['ministry_admin', 'master_admin'] },
+          { to: '/ministry/licensing', icon: ClipboardList, label: t.regulatoryControl, subtext: t.regulator, roles: ['ministry_inspector', 'master_admin'] },
+          { to: '/ministry/finance', icon: CreditCard, label: t.healthFinance, subtext: t.financeResources, roles: ['ministry_admin', 'master_admin'] },
+          { to: '/ministry/users', icon: Users, label: t.userGovernance, subtext: t.iamPolicies, roles: ['ministry_admin', 'master_admin'] },
+          { to: '/ministry/integration', icon: Globe, label: t.integrationGateway, subtext: t.interoperabilityHub, roles: ['ministry_admin', 'master_admin'] },
         ],
       },
       system: {
@@ -231,7 +236,7 @@ export function Sidebar() {
         {isOpen ? <X size={24} className="text-indigo-600" /> : <Menu size={24} className="text-slate-600" />}
       </button>
 
-      <aside className={cn(
+      <aside id="sidebar-nav" className={cn(
         "fixed inset-y-0 z-40 w-72 bg-white border-slate-200 shadow-2xl transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col",
         isRtl ? "right-0 border-l" : "left-0 border-r",
         isOpen ? "translate-x-0" : (isRtl ? "translate-x-full" : "-translate-x-full")

@@ -326,8 +326,8 @@ export function DashboardView() {
                          <TriangleAlert size={20} />
                       </div>
                       <div>
-                        <h4 className="text-sm font-black uppercase text-slate-900">Health Priority Node</h4>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic animate-pulse">Critical Intervention Required</p>
+                        <h4 className="text-sm font-black uppercase text-slate-900">{t.priorityNode}</h4>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic animate-pulse">{t.criticalIntervention}</p>
                       </div>
                    </div>
                    <button className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all">
@@ -337,14 +337,14 @@ export function DashboardView() {
 
                 <div className="flex-1 space-y-6">
                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Violations</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.activeViolations}</span>
                       <span className="text-xl font-black text-rose-600">14</span>
                    </div>
                    <div className="space-y-3">
                       {[
-                        { label: 'Latency Outliers', val: '24ms', risk: 'high' },
-                        { label: 'Data Corruption', val: '0.04%', risk: 'low' },
-                        { label: 'Unauthorized Access', val: '0', risk: 'safe' }
+                        { label: t.latencyOutliers, val: '24ms', risk: 'high' },
+                        { label: t.dataCorruption, val: '0.04%', risk: 'low' },
+                        { label: t.unauthorizedAccess, val: '0', risk: 'safe' }
                       ].map((item, i) => (
                         <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                           <span className="text-[9px] font-bold text-slate-500">{item.label}</span>
@@ -359,7 +359,7 @@ export function DashboardView() {
 
                 <div className="mt-8 pt-8 border-t border-slate-50">
                    <button className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-transform">
-                      Open Command Terminal
+                      {t.openTerminal}
                    </button>
                 </div>
               </motion.div>
@@ -367,10 +367,10 @@ export function DashboardView() {
               {/* Data Flow Forecast */}
               <motion.div variants={item} className="col-span-1 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col group relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
-                   <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Throughput Forecast</h4>
+                   <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">{t.throughputForecast}</h4>
                    <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <span className="text-[9px] font-black text-slate-400 uppercase">Predicted Trend</span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase">{t.predictedTrend}</span>
                    </div>
                 </div>
                 <div className="mt-4">
@@ -396,7 +396,7 @@ export function DashboardView() {
 
                 <div className="flex items-center gap-2 mt-4">
                    <button className="flex-1 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors">
-                      Optimize Load
+                      {t.optimizeLoad}
                    </button>
                    <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 transition-colors">
                       <Settings size={14} />
@@ -416,7 +416,7 @@ export function DashboardView() {
                     <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-white/10 transition-colors">
                       <Sparkles className="text-indigo-400" size={24} />
                     </div>
-                    <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase rounded-lg border border-indigo-500/30">Intelligence Active</span>
+                    <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase rounded-lg border border-indigo-500/30">{t.intelligenceActive}</span>
                   </div>
                   <h4 className="text-xl font-bold font-headline mb-3">{t.predictiveInsight}</h4>
                   <p className="text-sm text-slate-400 leading-relaxed font-medium">Neural processing identified a cluster of symptoms match in <span className="text-indigo-300">Region-04</span>. Recommend increasing supply bandwidth by <span className="text-emerald-400 font-bold">15%</span>.</p>
@@ -425,7 +425,7 @@ export function DashboardView() {
                       {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-900" />)}
                     </div>
                     <button className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors flex items-center gap-2">
-                      Review Patterns <ArrowUpRight size={14} />
+                       {t.reviewPatterns} <ArrowUpRight size={14} />
                     </button>
                   </div>
                 </motion.div>
@@ -470,11 +470,11 @@ export function DashboardView() {
                  <div className="absolute bottom-0 right-0 p-8 opacity-[0.02] group-hover:rotate-6 transition-all">
                     <Server size={100} />
                  </div>
-                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Infrastructure Health</p>
-                 <h3 className="text-xl font-bold font-headline text-slate-800 leading-tight">Global Grid is Operating at <span className="text-indigo-600">Peak Fluidity</span></h3>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{t.infraHealth}</p>
+                 <h3 className="text-xl font-bold font-headline text-slate-800 leading-tight">{t.gridStatus} <span className="text-indigo-600">{t.peakFluidity}</span></h3>
                  <div className="flex items-center gap-2 mt-2">
-                   <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">Synchronized</div>
-                   <div className="px-3 py-1 bg-slate-50 text-slate-400 rounded-full text-[9px] font-black uppercase tracking-widest">TLS 1.3 Active</div>
+                   <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">{t.synchronized}</div>
+                   <div className="px-3 py-1 bg-slate-50 text-slate-400 rounded-full text-[9px] font-black uppercase tracking-widest">{t.tlsActive}</div>
                  </div>
               </div>
             </motion.div>
@@ -560,7 +560,7 @@ export function DashboardView() {
                      <div className="flex -space-x-1">
                         {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-indigo-600 border border-slate-900 text-[8px] flex items-center justify-center font-bold">M{i}</div>)}
                      </div>
-                     <span className="text-[10px] font-bold text-slate-500">Global Consensus Protocol v1.4</span>
+                     <span className="text-[10px] font-bold text-slate-500">{t.consensusProtocol}</span>
                   </div>
                </div>
             </motion.div>

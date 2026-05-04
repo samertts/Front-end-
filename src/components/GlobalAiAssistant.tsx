@@ -109,6 +109,18 @@ export function GlobalAiAssistant() {
                   <span className="text-[9px] font-black uppercase tracking-widest">Full Chat</span>
                 </button>
               </div>
+
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+                 <button className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[8px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
+                    Show My Schedule
+                 </button>
+                 <button className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[8px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
+                    Verify Queue
+                 </button>
+                 <button className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[8px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
+                    Platform Status
+                 </button>
+              </div>
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">

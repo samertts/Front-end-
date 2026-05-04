@@ -6,10 +6,12 @@ import {
   Search, BookOpen, LifeBuoy, Mic, MicOff
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTour } from '../contexts/TourContext';
 import { cn } from '../lib/utils';
 
 export function HelpAssistant() {
   const { t, isRtl } = useLanguage();
+  const { startTour } = useTour();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'docs' | 'tips'>('tips');
   const [isVocalActive, setIsVocalActive] = useState(false);
@@ -111,8 +113,23 @@ export function HelpAssistant() {
                      </motion.div>
                    ))}
                    
-                   <button className="w-full py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-colors">
-                     View All Tutorials
+                   <button 
+                     onClick={() => {
+                       setIsOpen(false);
+                       startTour([
+                         { target: '#sidebar-nav', title: 'Navigation Core', description: 'Access all functional wings: Doctor, Lab, Citizen, and Ministry oversight from here.' },
+                         { target: '#top-bar-search', title: 'Smart Search', description: 'Use Cmd+K to quickly find patients, records, or system commands.' },
+                         { target: '#profile-dropdown', title: 'Domain Control', description: 'Switch between clinical roles and manage your identity security settings.' },
+                         { target: '#notification-bell', title: 'Real-time Alerts', description: 'Stay updated with critical alerts and system synchronization status.' }
+                       ]);
+                     }}
+                     className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 shadow-xl shadow-indigo-100 transition-all transform hover:scale-[1.02]"
+                   >
+                     {t.startTour}
+                   </button>
+                   
+                   <button className="w-full py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-100 italic">
+                     {t.tourDesc}
                    </button>
                  </div>
                )}

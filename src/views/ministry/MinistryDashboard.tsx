@@ -83,7 +83,7 @@ export function MinistryDashboard() {
              <div>
                 <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">{t.ministryWing}</span>
                 <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-none mt-1 uppercase">
-                   {t.nationalCommandCenter}
+                   {t.nationalCommand}
                 </h1>
              </div>
           </div>
